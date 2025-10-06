@@ -63,53 +63,57 @@ const TeacherTrackerApp = () => {
   }, []);
 
   // Get current location for a teacher
-  const getCurrentLocation = (teacher) => {
-    const now = currentDateTime;
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const currentDay = dayNames[now.getDay()];
-    
-    if (!days.includes(currentDay)) {
-      return { location: "Off Campus", status: "Weekend" };
-    }
+const getCurrentLocation = (teacher) => {
+  const now = currentDateTime;
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDay = dayNames[now.getDay()];
 
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+  if (!days.includes(currentDay)) {
+    return { location: "Off Campus", status: "Weekend" };
+  }
 
-    const schedule = timetableData.find(
-      row => row.teacher === teacher && row.day === currentDay
-    );
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
-    if (!schedule) {
-      return { location: defaultCabins[teacher] || "Location not set", status: "In Cabin" };
-    }
+  const schedule = timetableData.find(
+    row => row.teacher === teacher && row.day === currentDay
+  );
 
-    // Find current time slot
-    for (let slot of timeSlots) {
-      const [start, end] = slot.split('-');
-      const [startHour, startMin] = start.split(':').map(Number);
-      const [endHour, endMin] = end.split(':').map(Number);
-      
-      const startInMinutes = startHour * 60 + startMin;
-      const endInMinutes = endHour * 60 + endMin;
-      
-      if (currentTimeInMinutes >= startInMinutes && currentTimeInMinutes <= endInMinutes) {
-        const location = schedule[slot];
-        
-        if (!location || location === "") {
-          return { location: defaultCabins[teacher] || "Location not set", status: "In Cabin" };
-        }
-        
-        if (location === "Short Break") return { location: "On Break", status: "Short Break" };
-        if (location === "Lunch Break") return { location: "Lunch Area", status: "Lunch Break" };
-        if (location === "Online") return { location: "Remote", status: "Online Session" };
-        
-        return { location: `Room ${location}`, status: "In Lecture" };
-      }
-    }
-
+  if (!schedule) {
     return { location: defaultCabins[teacher] || "Location not set", status: "In Cabin" };
+  }
+
+  const convertToMinutes = (timeStr) => {
+    let [hour, minute] = timeStr.split(':').map(Number);
+    // Convert "01:40" to PM if it's after 8:00 (your college likely starts after 8 AM)
+    if (hour < 8) hour += 12;
+    return hour * 60 + minute;
   };
+
+  for (let slot of timeSlots) {
+    const [start, end] = slot.split('-');
+    const startInMinutes = convertToMinutes(start);
+    const endInMinutes = convertToMinutes(end);
+
+    if (currentTimeInMinutes >= startInMinutes && currentTimeInMinutes <= endInMinutes) {
+      const location = schedule[slot];
+
+      if (!location || location === "") {
+        return { location: defaultCabins[teacher] || "Location not set", status: "In Cabin" };
+      }
+
+      if (location === "Short Break") return { location: "On Break", status: "Short Break" };
+      if (location === "Lunch Break") return { location: "Lunch Area", status: "Lunch Break" };
+      if (location === "Online") return { location: "Remote", status: "Online Session" };
+
+      return { location: `Room ${location}`, status: "In Lecture" };
+    }
+  }
+
+  return { location: defaultCabins[teacher] || "Location not set", status: "In Cabin" };
+};
+
 
   // Book appointment
   const bookAppointment = () => {
